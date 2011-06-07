@@ -13,6 +13,13 @@ There are several options for constructing the OAuth object.
 
 This method has the advantage that, if the API is the same, nothing needs to be done by existing developers when they upgrade if the default is v1, however as OAuth2 becomes more wide-spread defaulting to v1 will be a headache for developers expecting the library to see the latest OAuth version.
 
+###Version flag option###
+    var oauth = OAuth({
+        consumerKey: 'CONSUMER-KEY',
+        consumerSecret: 'CONSUMER-SECRET',
+        version: 2
+    });
+
 ###Alternate constructors###
     var oauth = OAuth.V2({
         consumerKey: 'CONSUMER-KEY',
