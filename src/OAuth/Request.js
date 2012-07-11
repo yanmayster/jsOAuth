@@ -9,21 +9,10 @@
             XHR = global.Titanium.Network.createHTTPClient();
         } else if (typeof require !== 'undefined') {
             // CommonJS require
-            try {
-                XHR = new require("xhr").XMLHttpRequest();
-            } catch (e) {
-                // module didn't expose correct API or doesn't exists
-                if (typeof global.XMLHttpRequest !== "undefined") {
-                    XHR = new global.XMLHttpRequest();
-                } else {
-                    throw "No valid request transport found.";
-                }
-            }
-        } else if (typeof global.XMLHttpRequest !== "undefined") {
+            XHR = new require("xhr").XMLHttpRequest();
+        } else {
             // W3C
             XHR = new global.XMLHttpRequest();
-        } else {
-            throw "No valid request transport found.";
         }
 
         return XHR;

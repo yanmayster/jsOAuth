@@ -4,14 +4,14 @@
      * @constructor
      * @param {String} url
      */
-    function URI(url) {
+    function URI(url, skipQueryEncode) {
         var args = arguments, args_callee = args.callee,
             parsed_uri, scheme, host, port, path, query, anchor,
             parser = /^([^:\/?#]+?:\/\/)*([^\/:?#]*)?(:[^\/?#]*)*([^?#]*)(\?[^#]*)?(#(.*))*/,
             uri = this;
 
         if (!(this instanceof args_callee)) {
-            return new args_callee(url);
+            return new args_callee(url, skipQueryEncode);
         }
 
         uri.scheme = '';
@@ -19,6 +19,7 @@
         uri.port = '';
         uri.path = '';
         uri.query = new QueryString();
+        uri.query.skipQueryEncode = skipQueryEncode;
         uri.anchor = '';
 
         if (url !== null) {
@@ -73,7 +74,7 @@
      */
     function QueryString(obj){
         var args = arguments, args_callee = args.callee, args_length = args.length,
-            i, querystring = this, decode = OAuth.urlDecode;
+            i, querystring = this;
 
         if (!(this instanceof args_callee)) {
             return new args_callee(obj);
@@ -87,6 +88,8 @@
             }
         }
 
+        querystring.skipQueryEncode = false;
+
         return querystring;
     }
     // QueryString is a type of collection So inherit
@@ -99,8 +102,13 @@
 
         for (i in self) {
             if (self.hasOwnProperty(i)) {
-                if (i != undefined && self[i] != undefined) {
-                    val = encode(i) + '=' + encode(self[i]);
+                if (i != undefined && self[i] != undefined && self[i] != self.skipQueryEncode) {
+                    if (self.skipQueryEncode) {
+                        val = i + '=' + self[i];
+                    }
+                    else {
+                        val = encode(i) + '=' + encode(self[i]);
+                    }
                     q_arr.push(val);
                 }
             }
@@ -119,14 +127,14 @@
      */
     QueryString.prototype.setQueryParams = function (query) {
         var args = arguments, args_length = args.length, i, query_array,
-            query_array_length, querystring = this, key_value, decode = OAuth.urlDecode;
+            query_array_length, querystring = this, key_value;
 
         if (args_length == 1) {
             if (typeof query === 'object') {
                 // iterate
                 for (i in query) {
                     if (query.hasOwnProperty(i)) {
-                        querystring[i] = decode(query[i]);
+                        querystring[i] = query[i];
                     }
                 }
             } else if (typeof query === 'string') {
@@ -136,15 +144,13 @@
                 for (i = 0, query_array_length = query_array.length; i < query_array_length; i++) {
                     // split on '=' to get key, value
                     key_value = query_array[i].split('=');
-                    if (key_value[0] != "") {
-                        querystring[key_value[0]] = decode(key_value[1]);
-                    }
+                    querystring[key_value[0]] = key_value[1];
                 }
             }
         } else {
             for (i = 0; i < args_length; i += 2) {
                 // treat each arg as key, then value
-                querystring[args[i]] = decode(args[i+1]);
+                querystring[args[i]] = args[i+1];
             }
         }
     };

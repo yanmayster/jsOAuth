@@ -1,4 +1,3 @@
-var exports = exports || this;
 (function (global) {
     var b64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
@@ -35,4 +34,4 @@ var exports = exports || this;
 
         return output;
     };
-})(exports);
+})(this);

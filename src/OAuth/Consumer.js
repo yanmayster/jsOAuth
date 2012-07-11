@@ -99,23 +99,9 @@
                 success = options.success || function () {};
                 failure = options.failure || function () {};
 
-                // According to the spec
-                withFile = (function(){
-                    var hasFile = false;
-                    for(var name in data) {
-                        // Thanks to the FileAPI any file entry
-                        // has a fileName property
-                        if(typeof data[name].fileName != 'undefined') hasFile = true;
-                    }
-
-                    return hasFile;
-                })();
-
-                appendQueryString = options.appendQueryString ? options.appendQueryString : false;
-
-                if (oauth.enablePrivilege) {
-                    netscape.security.PrivilegeManager.enablePrivilege('UniversalBrowserRead UniversalBrowserWrite');
-                }
+                var req_param = this.getUrlAndSetHeaders(options);
+                url = req_param.url;
+                headers = req_param.headers;
 
                 xhr = Request();
                 xhr.onreadystatechange = function () {
@@ -159,6 +145,44 @@
                     }
                 };
 
+                xhr.open(method, url+'', true);
+
+                for (i in headers) {
+                    xhr.setRequestHeader(i, headers[i]);
+                }
+
+                xhr.send(query);
+            };
+
+            this.getUrlAndSetHeaders = function(options) {
+                var method, url, data, headers, i, skipQueryEncode,
+                    headerParams, signatureMethod, signatureString, signature,
+                    query = [], appendQueryString, signatureData = {}, params, withFile;
+
+                method = options.method || 'GET';
+                data = options.data || {};
+                headers = options.headers || {};
+                skipQueryEncode = options.skipQueryEncode || false;
+                url = URI(options.url, skipQueryEncode);
+
+                // According to the spec
+                withFile = (function(){
+                    var hasFile = false;
+                    for(var name in data) {
+                        // Thanks to the FileAPI any file entry
+                        // has a fileName property
+                        if(typeof data[name].fileName != 'undefined') hasFile = true;
+                    }
+
+                    return hasFile;
+                })();
+
+                appendQueryString = options.appendQueryString ? options.appendQueryString : false;
+
+                if (oauth.enablePrivilege) {
+                    netscape.security.PrivilegeManager.enablePrivilege('UniversalBrowserRead UniversalBrowserWrite');
+                }
+
                 headerParams = {
                     'oauth_callback': oauth.callbackUrl,
                     'oauth_consumer_key': oauth.consumerKey,
@@ -172,25 +196,25 @@
 
                 signatureMethod = oauth.signatureMethod;
 
-                // Handle GET params first
-                params = url.query.toObject();
-                for (i in params) {
-                    signatureData[i] = params[i];
-                }
-
                 // According to the OAuth spec
                 // if data is transfered using
                 // multipart the POST data doesn't
                 // have to be signed:
                 // http://www.mail-archive.com/oauth@googlegroups.com/msg01556.html
                 if((!('Content-Type' in headers) || headers['Content-Type'] == 'application/x-www-form-urlencoded') && !withFile) {
+                    params = url.query.toObject();
+                    for (i in params) {
+                        if(params[i] !== params.skipQueryEncode){
+                            signatureData[i] = params[i];
+                        }
+                    }
                     for (i in data) {
                         signatureData[i] = data[i];
                     }
                 }
 
                 urlString = url.scheme + '://' + url.host + url.path;
-                signatureString = toSignatureBaseString(method, urlString, headerParams, signatureData);
+                signatureString = toSignatureBaseString(method, urlString, headerParams, signatureData, skipQueryEncode);
 
                 signature = OAuth.signatureMethod[signatureMethod](oauth.consumerSecret, oauth.accessTokenSecret, signatureString);
 
@@ -200,9 +224,9 @@
                 {
                     headerParams['realm'] = this.realm;
                 }
-
+                
                 if (oauth.proxyUrl) {
-                    url = URI(oauth.proxyUrl + url.path);
+                    url = URI(oauth.proxyUrl + url.path);                   
                 }
 
                 if(appendQueryString || method == 'GET') {
@@ -234,15 +258,13 @@
                     }
                 }
 
-                xhr.open(method, url+'', true);
-
-                xhr.setRequestHeader('Authorization', 'OAuth ' + toHeaderString(headerParams));
-                xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
-                for (i in headers) {
-                    xhr.setRequestHeader(i, headers[i]);
-                }
-
-                xhr.send(query);
+                headers['Authorization'] = 'OAuth ' + toHeaderString(headerParams);
+                headers['X-Requested-With'] = 'XMLHttpRequest';
+                delete url.query.skipQueryEncode;
+                return {
+                    url: url+'',
+                    headers: headers
+                };
             };
 
             return this;
@@ -415,8 +437,9 @@
      * @param query_params {object} A key value paired object of data
      *                               example: {'q':'foobar'}
      *                               for GET this will append a query string
+     * @param skipQueryEncode {boolean} if true skip encoding of query parameters
      */
-    function toSignatureBaseString(method, url, header_params, query_params) {
+    function toSignatureBaseString(method, url, header_params, query_params, skipQueryEncode) {
         var arr = [], i, encode = OAuth.urlEncode;
 
         for (i in header_params) {
@@ -428,7 +451,12 @@
         for (i in query_params) {
             if (query_params[i] !== undefined && query_params[i] !== '') {
                 if (!header_params[i]) {
-                    arr.push([encode(i), encode(query_params[i] + '')]);
+                    if (skipQueryEncode) {
+                        arr.push([i, query_params[i] + '']);
+                    }
+                    else {
+                        arr.push([encode(i), encode(query_params[i] + '')]);
+                    }
                 }
             }
         }
