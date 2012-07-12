@@ -204,7 +204,7 @@
                 if((!('Content-Type' in headers) || headers['Content-Type'] == 'application/x-www-form-urlencoded') && !withFile) {
                     params = url.query.toObject();
                     for (i in params) {
-                        if(params[i] !== params.skipQueryEncode){
+                        if(i !== "skipQueryEncode"){
                             signatureData[i] = params[i];
                         }
                     }
@@ -260,7 +260,6 @@
 
                 headers['Authorization'] = 'OAuth ' + toHeaderString(headerParams);
                 headers['X-Requested-With'] = 'XMLHttpRequest';
-                delete url.query.skipQueryEncode;
                 return {
                     url: url+'',
                     headers: headers

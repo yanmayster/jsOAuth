@@ -102,7 +102,7 @@
 
         for (i in self) {
             if (self.hasOwnProperty(i)) {
-                if (i != undefined && self[i] != undefined && self[i] != self.skipQueryEncode) {
+                if (i != undefined && self[i] != undefined && i !== "skipQueryEncode") {
                     if (self.skipQueryEncode) {
                         val = i + '=' + self[i];
                     }
